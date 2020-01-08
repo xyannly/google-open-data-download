@@ -22,7 +22,7 @@ ImageId_csv = 'train-annotations-bbox.csv'
 ImageUrl_csv = 'train-images-boxable-with-rotation.csv'
 kwargs = {'header': None, 'names': ['LabelID', 'LabelName']}
 class_names = pd.read_csv(LabelName_csv, **kwargs)
-train_boxed = pd.read_csv(ImageId_csv,usecols=['ImageID','LabelName'])
+train_boxed = pd.read_csv(ImageId_csv)
 image_ids = pd.read_csv(ImageUrl_csv,usecols=['ImageID','OriginalURL'])
 
 def count_time(func):
@@ -125,8 +125,15 @@ def get_xmls(class_names,train_boxed):
         if root == path:
             break
         label_name = root.split('\\')[-1]
+        print(label_name)
         for file in files:
             if not re.search('.*jpg',file):
+                continue
+            #if file != '064488ad0730e061.jpg':
+            #    continue
+            img = cv2.imdecode(np.fromfile(file, dtype=np.uint8), -1)
+            if not img:
+                os.remove(file)
                 continue
             img_id = file.split('.')[0]
             xml_file = img_id+'.xml'
@@ -137,7 +144,7 @@ def get_xmls(class_names,train_boxed):
             rot.find('filename').text = file
             rot.find('path').text = root+'\\'+file
 
-            img = cv2.imdecode(np.fromfile(file,dtype=np.uint8),-1)
+
             width = img.shape[1]
             height = img.shape[0]
             depth = img.shape[2]
@@ -149,7 +156,7 @@ def get_xmls(class_names,train_boxed):
 
             Label_id = class_names.set_index('LabelName').loc[label_name, 'LabelID']
             train_min = train_boxed[(train_boxed.LabelName==Label_id)&(train_boxed.ImageID==img_id)]
-            print(train_min)
+            #print(train_min)
 
             for item in train_min.iterrows():
                 xmin = int(item[1]['XMin']*width)
@@ -184,11 +191,13 @@ def get_xmls(class_names,train_boxed):
                 Ymax.text = str(ymax)
                 indent_add(rot)
                 tree.write(xml_file)
+            print(xml_file+' compeleted!')
+
 
 
 input_imgname = ['Cabbage','Footwear','Flower','Flashlight','Envelope','Doll','Drinking straw','Pitcher','Balance beam','Roller skates','Apple','Belt','Briefcase','Cabinetry','Coffee table','Countertop','Curtain']
 #download('4949179909_5f4459df14_o','https://farm8.staticflickr.com/4113/4949179909_5f4459df14_o.jpg','./')#['Briefcase','Cabbage']sys.argv[1:]
 #input_labelid = ['/m/044r5d','/m/0wdt60w','/m/0138tl','/m/06k2mb','/m/03ssj5']
-get_Images(input_imgname,class_names,train_boxed,image_ids)
-#get_xmls(class_names,train_boxed)
+#get_Images(input_imgname,class_names,train_boxed,image_ids)
+get_xmls(class_names,train_boxed)
 print(input_imgname)
